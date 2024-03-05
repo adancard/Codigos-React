@@ -1,0 +1,78 @@
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { SelectList } from 'react-native-dropdown-select-list'
+
+const App = () => {
+
+  const [dinheiro, setDinheiro] = useState({})
+  const [selected, setSelected] = React.useState('');
+  const [selected2, setSelected2] = React.useState('');
+
+
+
+  const consultarDolar = () => {
+    fetch(`http://economia.awesomeapi.com.br/json/last/${selected}-${selected2}`).then(res => res.json()).then(data => {
+      const taxa = data[`${selected}${selected2}`]
+      if (taxa) {
+        setDinheiro(taxa)
+      }
+    }).catch(err => {
+
+      console.log(err)
+
+    })
+
+
+  }
+
+  const data = [
+    { key: 'USD', value: 'USD' },
+    { key: 'EUR', value: 'EUR' },
+    { key: 'BTC', value: 'BTC' },
+    { key: 'BRL', value: 'BRL' },
+  ]
+
+  const data2 = [
+    { key: 'USD', value: 'USD' },
+    { key: 'EUR', value: 'EUR' },
+    { key: 'BTC', value: 'BTC' },
+    { key: 'BRL', value: 'BRL' },
+  ]
+
+
+  return (
+    <View style={{ justifyContent: 'center', alignItems: 'center', flex: 1 }}>
+
+      <Text style={{ margin: 20 }}>Moeda Base</Text>
+      <SelectList setSelected={setSelected} data={data} />
+      <Text style={{ margin: 20 }}>Moeda Estrangeira</Text>
+      <SelectList setSelected={setSelected2} data={data2} />
+
+      <TouchableOpacity onPress={consultarDolar} style={{ backgroundColor: 'blue', margin: 10, borderRadius: 2, width: 'auto', width: 100, alignItems: 'center', height: 22 }}>
+        <Text style={{ color: 'white' }}>Consultar</Text>
+      </TouchableOpacity>
+
+      <View style={styles.resultContainer}>
+        <Text style={styles.resultLabel}>Resultado:</Text>
+        <Text>1 {selected} = {dinheiro.bid}{selected2}</Text>
+      </View>
+    </View>
+  )
+};
+
+const styles = StyleSheet.create({
+  resultContainer: {
+    marginTop: 20,
+  },
+  resultLabel: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  error: {
+    color: 'red',
+    marginTop: 10,
+  },
+});
+
+export default App;
