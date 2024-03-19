@@ -1,0 +1,381 @@
+import React, { useState, useEffect } from 'react';
+import { View, Text, Image, Modal, StyleSheet, SafeAreaView, ScrollView, TextInput, TouchableOpacity, FlatList,Button } from 'react-native';
+import axios from 'axios';
+
+const App = () => {
+  const [nome, setNome] = useState('Teste');
+  const [idade, setIdade] = useState('32');
+  const [dataNascimento, setDataNascimento] = useState('20/10/2018');
+  const [alunos, setAlunos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editMode, setEditMode] = useState(false);
+  const [editNome, setEditNome] = useState('')
+  const [editIdade, setEditIdade] = useState('')
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editDataNascimento, setEditDataNascimento] = useState('')
+  const [selectedAluno, setSelectedAluno] = useState(null);
+
+  const converterParaFormatoApi = (dataNascimento) => {
+
+    var dia  = dataNascimento.split("/")[0];
+    var mes  = dataNascimento.split("/")[1];
+    var ano  = dataNascimento.split("/")[2];
+  
+    return ano + '-' + ("0"+mes).slice(-2) + '-' + ("0"+dia).slice(-2);
+    // Utilizo o .slice(-2) para garantir o formato com 2 digitos.
+
+  };
+
+  const converterParaFormatoUsuario = (dataApi) => {
+
+
+  };
+
+  const buscarAluno = async () => {
+
+    try {
+      setTimeout(async () => {
+        const response = await axios.get('http://localhost:8080/alunos')
+        setAlunos(response.data)
+        setLoading(false);
+      }, 1000)
+    } catch (error) {
+
+      console.log('Erro ao buscar alunos: ', error);
+      setLoading(false);
+
+    }
+  };
+
+  const cadastrarAluno = async () => {
+
+    console.log(nome)
+    console.log(idade)
+    console.log(dataNascimento)
+
+    axios.post('http://localhost:8080/alunos', {
+      nome: nome,
+      idade: idade,
+      dataNascimento: converterParaFormatoApi(dataNascimento)
+    })
+      .then(function (response) {
+        console.log(response);
+      })
+      .catch(function (error) {
+        console.log(error);
+      });
+
+  };
+
+  const editarAluno = (id, nome, idade, dataNascimento) => {
+
+    setSelectedAluno({ id, nome, idade, dataNascimento })
+    setEditNome(nome)
+    setEditIdade(idade)
+    setEditDataNascimento(dataNascimento)
+    setModalVisible(true)
+
+  };
+
+  const handleSalvarEdicao = async () => {
+
+    axios.put(`http://localhost:8080/alunos/${selectedAluno.id}`, {
+      nome: editNome,
+      idade: editIdade,
+      dataNascimento: editDataNascimento
+    })
+      .then(function (response) {
+        console.log(response);
+      })
+      .catch(function (error) {
+        console.log(error);
+      });
+
+      console.log(`Salvar alterações para o aluno com ID ${selectedAluno.id}`);
+      setModalVisible(false)
+
+
+  }
+
+
+  const excluirAluno = async (id) => {
+
+    axios.delete(`http://localhost:8080/alunos/${id}`)
+      .then(response => {
+        console.log(`Deleted post with ID ${id}`);
+      })
+      .catch(error => {
+        console.error(error);
+      });
+
+  };
+
+  useEffect(() => {
+    buscarAluno();
+  }, []);
+
+
+  // Lógica de loading
+
+  return (
+    <ScrollView>
+      <SafeAreaView style={styles.container}>
+        <Image
+          source={require('./src/img/Aluno.png')}
+          style={styles.headerImage}
+        />
+        <Text style={styles.title}>APP Cadastro de Aluno</Text>
+
+        {/* Form Inicial */}
+        <View style={styles.formContainer}>
+
+          <TextInput
+            style={styles.input}
+            placeholder="Nome do aluno"
+            value={nome}
+            onChangeText={(text) => setNome(text)}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Idade"
+            value={idade}
+            onChangeText={(text) => setIdade(text)}
+          />
+
+          <TextInput
+            style={styles.input}
+            placeholder="Rua"
+            value={dataNascimento}
+            onChangeText={(text) => setDataNascimento(text)}
+          />
+
+
+          <Button style={styles.btn} title="Salvar" onPress={cadastrarAluno} />
+
+        </View>
+
+        <View style={styles.horizontalLine} />
+
+        <FlatList
+          data={alunos}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => (
+            <View style={styles.alunoItem}>
+              <View style={styles.dadosContainer}>
+                <Text>{item.nome}</Text>
+                <Text>{item.idade} anos</Text>
+                <Text>Data de Nascimento: {converterParaFormatoUsuario(item.dataNascimento, 'dd/MM/yyyy')}</Text>
+              </View>
+              <View style={styles.botoesContainer}>
+                {editMode ? (
+                  // Modo de edição
+                  <TouchableOpacity
+                    style={styles.cancelarButton}
+                    onPress={cancelarEdicao}
+                  >
+                    <Image
+                      source={require('./src/img/IconCancela.jpg')}
+                      style={styles.icon}
+                    />
+                  </TouchableOpacity>
+                ) : (
+                  // Modo padrão
+                  <>
+                    <TouchableOpacity
+                      style={styles.editButton}
+                      onPress={() => editarAluno(item.id, item.nome, item.idade, item.dataNascimento)}
+                    >
+                      <Image
+                        source={require('./src/img/IconEdit.png')}
+                        style={styles.icon}
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => excluirAluno(item.id)}
+                    >
+                      <Image
+                        source={require('./src/img/IconExclui.png')}
+                        style={styles.icon}
+                      />
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            </View>
+          )}
+        />
+
+        {/* Modal de Edição */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Editar País</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Nome"
+                value={editNome}
+                onChangeText={text => setEditNome(text)}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Capital"
+                value={editIdade}
+                onChangeText={text => setEditIdade(text)}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Capital"
+                value={editDataNascimento}
+                onChangeText={text => setEditDataNascimento(text)}
+              />
+              <TouchableOpacity style={styles.btn} onPress={() => setModalVisible(false)}>
+                <Text style={styles.btnText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.btn} onPress={handleSalvarEdicao}>
+                <Text style={styles.btnText}>Salvar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+      </SafeAreaView>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+    marginLeft: 10,
+    marginRight: 10,
+  },
+  headerImage: {
+    height: 250,
+    width: 400,
+    resizeMode: 'cover',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 10,
+  },
+  horizontalLine: {
+    borderBottomColor: 'black',
+    borderBottomWidth: 1,
+    marginVertical: 10,
+  },
+  formContainer: {
+    marginTop: 20,
+  },
+  input: {
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    marginBottom: 10,
+    paddingHorizontal: 10,
+  },
+  button: {
+    backgroundColor: 'red',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: 'white',
+  },
+  listContainer: {
+    flex: 1,
+    marginTop: 20,
+  },
+  alunoItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+  },
+  dadosContainer: {
+    flex: 3,
+  },
+  botoesContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    flex: 1,
+  },
+  editButton: {
+    marginLeft: 10,
+    padding: 5,
+    borderRadius: 5,
+  },
+  deleteButton: {
+    marginLeft: 10,
+    padding: 5,
+    borderRadius: 5,
+  },
+  icon: {
+    width: 48,
+    height: 48,
+  },
+  cancelarButton: {
+    marginLeft: 10,
+    marginRight: 10,
+    padding: 5,
+    alignItems: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  input: {
+    height: 40,
+    width: '80%',
+    borderColor: 'gray',
+    borderWidth: 1,
+    marginBottom: 20,
+    paddingLeft: 10,
+  },
+  btn: {
+    backgroundColor: '#808080',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8, // Espaço entre os botões
+  },
+  modalContainer: {
+    flex: 1,
+    width: "100%",
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    padding: 16,
+    borderRadius: 8,
+    elevation: 5,
+    width: '80%',
+  },
+  modalTitle: {
+    fontSize: 20,
+    textAlign: 'center',
+    marginBottom: 16,
+    fontWeight: 'bold',
+    backgroundColor: '#dcdcdc',
+    padding: 8,
+  },
+
+});
+
+export default App;
